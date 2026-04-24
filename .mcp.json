@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "devfolio": {
+      "type": "http",
+      "url": "https://mcp.devfolio.co/mcp?apiKey=02e253ecde5d108df882f452f70c2df7b60a5d5a7ca6307f2a6ddcc9324225d1"
+    }
+  }
+}
