@@ -1,7 +1,9 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+
+type LastTeam = { code: string; name: string }
 
 export default function Home() {
   const router = useRouter()
@@ -11,6 +13,14 @@ export default function Home() {
   const [joinCode, setJoinCode] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [lastTeam, setLastTeam] = useState<LastTeam | null>(null)
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem('unsaid_last_team')
+      if (stored) setLastTeam(JSON.parse(stored))
+    } catch {}
+  }, [])
 
   const decrement = () => setMemberCount((n) => Math.max(2, n - 1))
   const increment = () => setMemberCount((n) => n + 1)
@@ -27,7 +37,7 @@ export default function Home() {
       })
       const data = await res.json()
       if (!res.ok) return setError(data.error || 'Something went wrong')
-      router.push(`/team/${data.code}?new=1`)
+      router.push(`/team/${data.code}`)
     } catch {
       setError('Network error. Please try again.')
     } finally {
@@ -51,9 +61,27 @@ export default function Home() {
     }
   }
 
+  async function handleRejoin() {
+    if (!lastTeam) return
+    setLoading(true)
+    try {
+      const res = await fetch(`/api/team?code=${lastTeam.code}`)
+      if (res.ok) {
+        router.push(`/team/${lastTeam.code}`)
+      } else {
+        localStorage.removeItem('unsaid_last_team')
+        setLastTeam(null)
+      }
+    } catch {
+      setError('Network error. Please try again.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
   return (
     <main className="min-h-screen flex flex-col items-center justify-center px-4 py-16">
-      <div className="w-full max-w-sm flex flex-col gap-12">
+      <div className="w-full max-w-sm flex flex-col gap-10">
 
         {/* Wordmark */}
         <div className="flex flex-col gap-3">
@@ -62,6 +90,26 @@ export default function Home() {
             A space for the things your team<br />thinks, but never says out loud.
           </p>
         </div>
+
+        {/* Rejoin shortcut */}
+        {lastTeam && (
+          <button
+            onClick={handleRejoin}
+            disabled={loading}
+            className="w-full flex items-center justify-between bg-surface border border-white/10 hover:border-accent/40 rounded-xl px-4 py-3.5 transition-colors group"
+          >
+            <div className="text-left">
+              <p className="text-cream-muted/60 text-xs mb-0.5">Continue as</p>
+              <p className="text-cream text-sm font-medium">{lastTeam.name}</p>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-cream-muted/50 text-xs font-mono">{lastTeam.code}</span>
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none" className="text-cream-muted/40 group-hover:text-accent transition-colors">
+                <path d="M4 8H12M9 5L12 8L9 11" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </div>
+          </button>
+        )}
 
         {mode === 'create' ? (
           <div className="flex flex-col gap-5">
@@ -91,7 +139,7 @@ export default function Home() {
             <button
               onClick={handleCreate}
               disabled={loading}
-              className="w-full bg-accent hover:bg-accent-hover disabled:opacity-50 text-white font-medium py-3.5 rounded-xl transition-colors text-sm mt-1"
+              className="w-full bg-accent hover:bg-accent-hover disabled:opacity-50 text-white font-medium py-3.5 rounded-xl transition-colors text-sm"
             >
               {loading ? 'Creating…' : 'Create team'}
             </button>
@@ -137,7 +185,7 @@ export default function Home() {
           </div>
         )}
 
-        <p className="text-center text-cream-muted/30 text-xs -mt-4">
+        <p className="text-center text-cream-muted/30 text-xs">
           No account needed · Fully anonymous
         </p>
       </div>

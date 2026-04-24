@@ -2,8 +2,9 @@
 
 import { use, useState, useEffect } from 'react'
 import Link from 'next/link'
+import AppHeader from '@/components/AppHeader'
 import AnswerDrawer from '@/components/AnswerDrawer'
-import type { Question, Synthesis } from '@/lib/supabase'
+import type { Question, Synthesis, Team } from '@/lib/supabase'
 
 function SparkleIcon() {
   return (
@@ -31,9 +32,9 @@ export default function QuestionDetail({
   params: Promise<{ code: string; id: string }>
 }) {
   const { code, id } = use(params)
+  const [team, setTeam] = useState<Team | null>(null)
   const [question, setQuestion] = useState<Question | null>(null)
   const [synthesis, setSynthesis] = useState<Synthesis | null>(null)
-  const [memberCount, setMemberCount] = useState(0)
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [hasAnswered, setHasAnswered] = useState(false)
   const [loading, setLoading] = useState(true)
@@ -51,10 +52,7 @@ export default function QuestionDetail({
         if (sRes.ok) setSynthesis(await sRes.json())
       }
     }
-    if (teamRes.ok) {
-      const t = await teamRes.json()
-      setMemberCount(t.member_count)
-    }
+    if (teamRes.ok) setTeam(await teamRes.json())
     setHasAnswered(getAnswered().includes(id))
     setLoading(false)
   }
@@ -76,7 +74,7 @@ export default function QuestionDetail({
     )
   }
 
-  if (!question) {
+  if (!question || !team) {
     return (
       <main className="min-h-screen flex items-center justify-center px-4">
         <div className="text-center">
@@ -90,91 +88,95 @@ export default function QuestionDetail({
   const isClosed = question.status === 'closed'
 
   return (
-    <main className="min-h-screen flex flex-col max-w-lg mx-auto px-4 pb-16">
+    <main className="min-h-screen flex flex-col max-w-lg mx-auto pb-16">
 
-      {/* Back nav */}
-      <div className="pt-12 pb-6">
+      <AppHeader teamName={team.name} code={code} />
+
+      {/* Back to feed */}
+      <div className="px-4 pb-4">
         <Link
           href={`/team/${code}`}
-          className="text-cream-muted text-sm flex items-center gap-1.5 hover:text-cream transition-colors w-fit"
+          className="text-cream-muted/60 text-xs flex items-center gap-1 hover:text-cream-muted transition-colors w-fit"
         >
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
             <path d="M10 3L5 8L10 13" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
-          Back
+          Back to feed
         </Link>
       </div>
 
-      {/* Question card */}
-      <div className="bg-surface rounded-2xl p-5 border border-white/5 mb-6">
-        <p className="text-xs text-cream-muted uppercase tracking-widest mb-3">The question</p>
-        <p className="text-cream text-base leading-relaxed">{question.anonymized_text}</p>
-      </div>
-
-      {isClosed ? (
-        /* ── Synthesis revealed ── */
-        <div className="flex flex-col gap-5">
-          <div className="flex items-center gap-2">
-            <SparkleIcon />
-            <p className="text-xs text-cream-muted uppercase tracking-widest">Team insight</p>
-          </div>
-
-          <div
-            className="rounded-2xl p-px"
-            style={{ background: 'linear-gradient(135deg, #6366F1 0%, #818cf8 50%, #4338ca 100%)' }}
-          >
-            <div className="bg-[#0f1123] rounded-2xl p-6">
-              <p className="text-cream text-base leading-7">
-                {synthesis?.insight_text ?? 'Generating insight…'}
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-center justify-center gap-3 mt-1">
-            <div className="h-px flex-1 bg-white/5" />
-            <p className="text-cream-muted/40 text-xs whitespace-nowrap">
-              Synthesised from {question.answer_count} anonymous answers
-            </p>
-            <div className="h-px flex-1 bg-white/5" />
-          </div>
+      <div className="px-4">
+        {/* Question card */}
+        <div className="bg-surface rounded-2xl p-5 border border-white/5 mb-6">
+          <p className="text-xs text-cream-muted uppercase tracking-widest mb-3">The question</p>
+          <p className="text-cream text-base leading-relaxed">{question.anonymized_text}</p>
         </div>
-      ) : (
-        /* ── Pending state ── */
-        <div className="flex flex-col gap-6">
-          <div className="flex flex-col gap-2">
-            <div className="flex justify-between text-xs text-cream-muted">
-              <span>{question.answer_count} of {memberCount} answered</span>
-              <span className="text-cream-muted/50">Unlocks when everyone answers</span>
-            </div>
-            <div className="w-full bg-white/5 rounded-full h-1.5">
-              <div
-                className="bg-accent h-1.5 rounded-full transition-all"
-                style={{ width: `${Math.min((question.answer_count / memberCount) * 100, 100)}%` }}
-              />
-            </div>
-          </div>
 
-          {hasAnswered ? (
-            <div className="bg-surface rounded-2xl p-5 border border-white/5 text-center">
-              <p className="text-cream-muted text-sm">
-                You've answered. Waiting for the rest of the team.
-              </p>
+        {isClosed ? (
+          /* ── Synthesis revealed ── */
+          <div className="flex flex-col gap-5">
+            <div className="flex items-center gap-2">
+              <SparkleIcon />
+              <p className="text-xs text-cream-muted uppercase tracking-widest">Team insight</p>
             </div>
-          ) : (
-            <button
-              onClick={() => setDrawerOpen(true)}
-              className="w-full bg-accent hover:bg-accent-hover text-white font-medium py-4 rounded-2xl transition-colors text-sm"
-              style={{ boxShadow: '0 4px 24px rgba(99,102,241,0.35)' }}
+
+            <div
+              className="rounded-2xl p-px"
+              style={{ background: 'linear-gradient(135deg, #6366F1 0%, #818cf8 50%, #4338ca 100%)' }}
             >
-              Answer this question
-            </button>
-          )}
+              <div className="bg-[#0f1123] rounded-2xl p-6">
+                <p className="text-cream text-base leading-7">
+                  {synthesis?.insight_text ?? 'Generating insight…'}
+                </p>
+              </div>
+            </div>
 
-          <p className="text-cream-muted/30 text-xs text-center leading-relaxed">
-            Your answer is rewritten before it's stored.<br />No one sees your original words.
-          </p>
-        </div>
-      )}
+            <div className="flex items-center justify-center gap-3 mt-1">
+              <div className="h-px flex-1 bg-white/5" />
+              <p className="text-cream-muted/40 text-xs whitespace-nowrap">
+                Synthesised from {question.answer_count} anonymous answers
+              </p>
+              <div className="h-px flex-1 bg-white/5" />
+            </div>
+          </div>
+        ) : (
+          /* ── Pending state ── */
+          <div className="flex flex-col gap-6">
+            <div className="flex flex-col gap-2">
+              <div className="flex justify-between text-xs text-cream-muted">
+                <span>{question.answer_count} of {team.member_count} answered</span>
+                <span className="text-cream-muted/50">Unlocks when everyone answers</span>
+              </div>
+              <div className="w-full bg-white/5 rounded-full h-1.5">
+                <div
+                  className="bg-accent h-1.5 rounded-full transition-all"
+                  style={{ width: `${Math.min((question.answer_count / team.member_count) * 100, 100)}%` }}
+                />
+              </div>
+            </div>
+
+            {hasAnswered ? (
+              <div className="bg-surface rounded-2xl p-5 border border-white/5 text-center">
+                <p className="text-cream-muted text-sm">
+                  You've answered. Waiting for the rest of the team.
+                </p>
+              </div>
+            ) : (
+              <button
+                onClick={() => setDrawerOpen(true)}
+                className="w-full bg-accent hover:bg-accent-hover text-white font-medium py-4 rounded-2xl transition-colors text-sm"
+                style={{ boxShadow: '0 4px 24px rgba(99,102,241,0.35)' }}
+              >
+                Answer this question
+              </button>
+            )}
+
+            <p className="text-cream-muted/30 text-xs text-center leading-relaxed">
+              Your answer is rewritten before it's stored.<br />No one sees your original words.
+            </p>
+          </div>
+        )}
+      </div>
 
       <AnswerDrawer
         isOpen={drawerOpen}

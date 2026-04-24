@@ -2,7 +2,7 @@
 
 import { use, useState, useEffect } from 'react'
 import Link from 'next/link'
-import { useSearchParams } from 'next/navigation'
+import AppHeader from '@/components/AppHeader'
 import AnswerDrawer from '@/components/AnswerDrawer'
 import type { Team, Question } from '@/lib/supabase'
 
@@ -22,24 +22,11 @@ function PlusIcon() {
   )
 }
 
-function CopyIcon() {
-  return (
-    <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-      <rect x="4" y="4" width="8" height="8" rx="1.5" stroke="currentColor" strokeWidth="1.2" />
-      <path d="M2 10V3C2 2.45 2.45 2 3 2H10" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
-    </svg>
-  )
-}
-
 export default function TeamFeed({ params }: { params: Promise<{ code: string }> }) {
   const { code } = use(params)
-  const searchParams = useSearchParams()
-  const isNew = searchParams.get('new') === '1'
-
   const [team, setTeam] = useState<Team | null>(null)
   const [questions, setQuestions] = useState<Question[]>([])
   const [drawerOpen, setDrawerOpen] = useState(false)
-  const [copied, setCopied] = useState(false)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -48,18 +35,17 @@ export default function TeamFeed({ params }: { params: Promise<{ code: string }>
         fetch(`/api/team?code=${code}`),
         fetch(`/api/questions?code=${code}`),
       ])
-      if (teamRes.ok) setTeam(await teamRes.json())
+      if (teamRes.ok) {
+        const t = await teamRes.json()
+        setTeam(t)
+        // Persist last visited team for home page rejoin shortcut
+        localStorage.setItem('unsaid_last_team', JSON.stringify({ code: t.code, name: t.name }))
+      }
       if (qRes.ok) setQuestions(await qRes.json())
       setLoading(false)
     }
     load()
   }, [code])
-
-  function copyCode() {
-    navigator.clipboard.writeText(code)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
-  }
 
   function onQuestionSubmitted() {
     setDrawerOpen(false)
@@ -90,36 +76,7 @@ export default function TeamFeed({ params }: { params: Promise<{ code: string }>
   return (
     <main className="min-h-screen flex flex-col max-w-lg mx-auto">
 
-      {/* Header */}
-      <div className="flex items-center justify-between px-4 pt-12 pb-4">
-        <div>
-          <p className="text-cream-muted text-xs uppercase tracking-widest mb-1">Team</p>
-          <h1 className="text-cream text-xl font-semibold">{team.name}</h1>
-        </div>
-        <button
-          onClick={copyCode}
-          className="flex items-center gap-2 bg-surface px-3 py-1.5 rounded-full border border-white/5 hover:border-white/15 transition-colors"
-        >
-          <div className="w-1.5 h-1.5 rounded-full bg-accent" />
-          <span className="text-cream-muted text-xs font-mono">{code.toUpperCase()}</span>
-          <CopyIcon />
-        </button>
-      </div>
-
-      {/* New team share nudge */}
-      {isNew && (
-        <div className="mx-4 mb-4 bg-accent/10 border border-accent/20 rounded-xl px-4 py-3 flex items-center justify-between gap-3">
-          <p className="text-cream-muted text-xs leading-relaxed">
-            Share code <span className="text-cream font-mono font-medium">{code}</span> with your team
-          </p>
-          <button
-            onClick={copyCode}
-            className="text-accent text-xs font-medium whitespace-nowrap"
-          >
-            {copied ? 'Copied!' : 'Copy'}
-          </button>
-        </div>
-      )}
+      <AppHeader teamName={team.name} code={code} />
 
       {/* Question feed */}
       <div className="flex-1 flex flex-col gap-3 px-4 pb-36">
