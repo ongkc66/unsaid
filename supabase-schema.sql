@@ -6,6 +6,10 @@ create table teams (
   code char(6) unique not null,
   name text not null,
   member_count int not null,
+  summary_text text,
+  summary_themes text[] not null default '{}',
+  summary_generated_at timestamptz,
+  summary_source_count int not null default 0,
   created_at timestamptz default now()
 );
 
@@ -15,6 +19,7 @@ create table questions (
   anonymized_text text not null,
   status text default 'open' check (status in ('open', 'closed')),
   answer_count int default 0,
+  is_ai_generated boolean not null default false,
   created_at timestamptz default now()
 );
 
@@ -29,6 +34,8 @@ create table synthesis (
   id uuid primary key default gen_random_uuid(),
   question_id uuid references questions(id) on delete cascade not null,
   insight_text text not null,
+  themes text[] not null default '{}',
+  suggestions text[] not null default '{}',
   created_at timestamptz default now()
 );
 
@@ -55,3 +62,7 @@ create policy "public insert answers" on answers for insert with check (true);
 
 create policy "public read synthesis" on synthesis for select using (true);
 create policy "public insert synthesis" on synthesis for insert with check (true);
+
+-- Realtime — broadcast question + synthesis changes to subscribed clients
+alter publication supabase_realtime add table questions;
+alter publication supabase_realtime add table synthesis;

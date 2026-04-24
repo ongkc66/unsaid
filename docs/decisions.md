@@ -15,10 +15,16 @@
 **Why:** In a 3-person team, showing even anonymized individual answers makes attribution trivial. Synthesis is the only safe output format at this team size.
 **Trade-off:** Loses nuance and outlier opinions. Accepted — the goal is team-level understanding, not individual tracking.
 
-## AI decoy answers injected (answers only, not questions)
-**Decision:** Claude generates 1–2 plausible filler *answers* to mix into the pool before synthesis. AI-generated *questions* are cut from MVP.
-**Why:** Decoy answers break the "2 of 3 answered = I know who said what" problem. AI-generated questions add build complexity without improving the core demo — cut for the 5-hour prototype.
-**Trade-off:** Slightly dilutes synthesis quality. Prompts should instruct Claude to weight real answers over decoys.
+## AI decoy answers injected
+**Decision:** Claude generates 1–2 plausible filler *answers* to mix into the pool before synthesis.
+**Why:** Decoy answers break the "2 of 3 answered = I know who said what" problem.
+**Trade-off:** Slightly dilutes synthesis quality. Prompts instruct Claude to weight real answers over decoys.
+
+## AI-seeded questions (reversed 24 Apr 2026)
+**Decision:** Claude generates seed *questions* on three triggers: team creation (cold start), synthesis close (momentum), and feed GET when no open questions exist (quiet-team fallback). Seeded rows carry `is_ai_generated = true` and render with a "From Unsaid" sparkle badge — never disguised as a teammate.
+**Why:** Empty feeds kill the core loop. Activity-driven triggers (not cron) pace nudges to real team usage — active teams get more prompts, quiet teams don't get spammed. No background infra needed.
+**Trade-off:** Every team-creation and synthesis-close now pays one extra Claude call (~1–2 s). Acceptable at demo scale; in production both should be fire-and-forget via a queue.
+**Reverses:** the earlier "AI-generated questions cut from MVP" decision — purpose-alignment (surfacing unsaid things) outweighed the complexity concern.
 
 ## Supabase over PlanetScale / Railway Postgres
 **Decision:** Supabase for the database layer.

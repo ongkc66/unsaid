@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabaseAdmin } from '@/lib/supabase'
+import { supabaseAdmin } from '@/lib/supabase-admin'
+import { insertSeedQuestion } from '@/lib/seed'
+import { refreshTeamSummary } from '@/lib/team-summary'
 
 function generateCode(): string {
   return Math.random().toString(36).substring(2, 8).toUpperCase()
@@ -30,6 +32,9 @@ export async function POST(req: NextRequest) {
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
+  // Cold-start nudge: drop in one AI-seeded question so the feed is never empty.
+  await insertSeedQuestion(data.id)
+
   return NextResponse.json(data, { status: 201 })
 }
 
@@ -42,11 +47,26 @@ export async function GET(req: NextRequest) {
 
   const { data, error } = await supabaseAdmin
     .from('teams')
-    .select('id, code, name, member_count, created_at')
+    .select('id, code, name, member_count, summary_text, summary_themes, summary_generated_at, summary_source_count, created_at')
     .eq('code', code)
     .single()
 
   if (error || !data) return NextResponse.json({ error: 'Team not found' }, { status: 404 })
+
+  // On-demand summary generation: if the team has closed insights but no cached
+  // summary (e.g. insights existed before this feature shipped), generate now and
+  // return the freshly populated row.
+  if (!data.summary_text) {
+    const generated = await refreshTeamSummary(data.id)
+    if (generated) {
+      const { data: fresh } = await supabaseAdmin
+        .from('teams')
+        .select('id, code, name, member_count, summary_text, summary_themes, summary_generated_at, summary_source_count, created_at')
+        .eq('id', data.id)
+        .single()
+      if (fresh) return NextResponse.json(fresh)
+    }
+  }
 
   return NextResponse.json(data)
 }

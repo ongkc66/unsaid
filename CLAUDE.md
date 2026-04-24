@@ -24,7 +24,7 @@ Anonymous peer-to-peer team insight tool — surface what small teams actually t
 - Text: `#F0EEE6` (warm off-white)
 - Accent: `#6366F1` (indigo)
 - Font: Geist Sans — synthesis output uses `text-lg font-medium` to signal main event
-- Layout: `max-w-lg mx-auto` — single column, works on mobile and desktop
+- Layout: `max-w-2xl lg:max-w-5xl mx-auto` — 672px below 1024px viewports, 1024px on desktop. Compose drawer stays `max-w-2xl` for focused writing.
 - Mobile-first: design for 390px width first; touch targets min 44px; no hover-only interactions
 - Submission UI: bottom drawer (slides up over feed, `useState` + Tailwind translate, clears above keyboard)
 - Question cards: sealed state (pending) → revealed state (synthesis ready)

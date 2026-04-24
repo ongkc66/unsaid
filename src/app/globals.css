@@ -24,3 +24,89 @@ body {
   color: #F0EEE6;
   -webkit-font-smoothing: antialiased;
 }
+
+/* Synthesis reveal — word-by-word fade up */
+@keyframes reveal-word {
+  0% { opacity: 0; transform: translateY(8px); filter: blur(4px); }
+  100% { opacity: 1; transform: translateY(0); filter: blur(0); }
+}
+.reveal-word {
+  display: inline-block;
+  opacity: 0;
+  animation: reveal-word 380ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  will-change: opacity, transform, filter;
+}
+
+/* Insight bloom — soft radial glow pulse behind the insight card */
+@keyframes insight-bloom {
+  0% { opacity: 0; transform: scale(0.8); }
+  60% { opacity: 0.55; }
+  100% { opacity: 0.35; transform: scale(1); }
+}
+.insight-bloom {
+  animation: insight-bloom 1600ms ease-out forwards;
+}
+
+/* Subtle fade-up for secondary elements */
+@keyframes fade-up {
+  0% { opacity: 0; transform: translateY(6px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+.fade-up {
+  opacity: 0;
+  animation: fade-up 480ms ease-out forwards;
+}
+
+/* Home page — ambient floating orbs */
+@keyframes orb-a {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(28px, -36px) scale(1.07); }
+  66% { transform: translate(-18px, 22px) scale(0.94); }
+}
+@keyframes orb-b {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(-32px, 28px) scale(1.05); }
+}
+@keyframes orb-c {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  40% { transform: translate(22px, 18px) scale(0.91); }
+  80% { transform: translate(-12px, -22px) scale(1.04); }
+}
+.orb-a { animation: orb-a 12s ease-in-out infinite; }
+.orb-b { animation: orb-b 16s ease-in-out infinite; }
+.orb-c { animation: orb-c 20s ease-in-out infinite; }
+
+/* Rotating prompt cycle */
+@keyframes prompt-in {
+  0% { opacity: 0; transform: translateY(6px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+.prompt-in {
+  animation: prompt-in 500ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+/* Suggestion checkbox — scale-in on check */
+@keyframes checkIn {
+  0% { transform: scale(0); opacity: 0; }
+  70% { transform: scale(1.2); }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+/* Progress count flash — brief accent pulse when value changes */
+@keyframes count-flash {
+  0% { color: var(--color-accent); transform: scale(1.08); }
+  100% { color: inherit; transform: scale(1); }
+}
+.count-flash {
+  animation: count-flash 600ms ease-out;
+  display: inline-block;
+}
+
+/* Home page preview — infinite breathing glow behind the insight card */
+@keyframes preview-bloom {
+  0%, 100% { opacity: 0.18; transform: scale(0.92); }
+  50% { opacity: 0.38; transform: scale(1.06); }
+}
+.preview-bloom {
+  animation: preview-bloom 5s ease-in-out infinite;
+}

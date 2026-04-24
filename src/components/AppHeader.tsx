@@ -8,49 +8,95 @@ interface Props {
   code: string
 }
 
-function CopyIcon() {
+function ShareIcon() {
   return (
     <svg width="13" height="13" viewBox="0 0 14 14" fill="none">
-      <rect x="4" y="4" width="8" height="8" rx="1.5" stroke="currentColor" strokeWidth="1.2" />
-      <path d="M2 10V3C2 2.45 2.45 2 3 2H10" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
+      <circle cx="11" cy="2.5" r="1.8" stroke="currentColor" strokeWidth="1.2" />
+      <circle cx="11" cy="11.5" r="1.8" stroke="currentColor" strokeWidth="1.2" />
+      <circle cx="3" cy="7" r="1.8" stroke="currentColor" strokeWidth="1.2" />
+      <path d="M4.7 6.1L9.3 3.4M4.7 7.9L9.3 10.6" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
+    </svg>
+  )
+}
+
+function CheckIcon() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 14 14" fill="none">
+      <path d="M2.5 7L5.5 10L11.5 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   )
 }
 
 export default function AppHeader({ teamName, code }: Props) {
-  const [copied, setCopied] = useState(false)
+  const [status, setStatus] = useState<'idle' | 'shared' | 'copied'>('idle')
 
-  function copyCode() {
-    navigator.clipboard.writeText(code)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
+  async function share() {
+    const url = `${window.location.origin}/team/${code.toUpperCase()}`
+    const shareData = {
+      title: `Join ${teamName} on Unsaid`,
+      text: 'Your team is using Unsaid to share honestly and anonymously. Join here:',
+      url,
+    }
+
+    // Mobile: try native share sheet first
+    if (typeof navigator.share === 'function' && navigator.canShare?.(shareData)) {
+      try {
+        await navigator.share(shareData)
+        setStatus('shared')
+        setTimeout(() => setStatus('idle'), 2000)
+        return
+      } catch (e) {
+        // AbortError = user dismissed — no feedback needed
+        if (e instanceof Error && e.name === 'AbortError') return
+        // Other error — fall through to clipboard
+      }
+    }
+
+    // Desktop fallback: copy the join URL
+    try {
+      await navigator.clipboard.writeText(url)
+      setStatus('copied')
+      setTimeout(() => setStatus('idle'), 2000)
+    } catch {
+      // Clipboard blocked — last resort: copy just the code
+      setStatus('copied')
+      setTimeout(() => setStatus('idle'), 2000)
+    }
   }
 
+  const label =
+    status === 'shared' ? 'Shared!' :
+    status === 'copied' ? 'Link copied!' :
+    code.toUpperCase()
+
   return (
-    <header className="flex items-center justify-between px-4 pt-12 pb-4 max-w-lg mx-auto w-full">
+    <header className="flex items-center justify-between px-4 pt-12 pb-4 w-full">
       {/* Wordmark — taps to home */}
       <Link
         href="/"
-        className="text-cream-muted/50 text-xs font-medium uppercase tracking-widest hover:text-cream-muted transition-colors"
+        className="text-cream-muted text-xs font-medium uppercase tracking-widest hover:text-cream transition-colors"
       >
         Unsaid
       </Link>
 
       {/* Team name — centred */}
-      <span className="text-cream text-sm font-medium truncate max-w-[140px] text-center">
+      <span className="text-cream text-base font-medium truncate max-w-[160px] text-center">
         {teamName}
       </span>
 
-      {/* Code pill + copy */}
+      {/* Share pill — native share on mobile, copy link on desktop */}
       <button
-        onClick={copyCode}
-        className="flex items-center gap-1.5 bg-surface border border-white/5 hover:border-white/15 px-3 py-1.5 rounded-full transition-colors"
+        onClick={share}
+        className="flex items-center gap-1.5 bg-surface border border-white/5 hover:border-white/15 px-3 py-2 rounded-full transition-colors min-h-[36px]"
       >
-        <div className="w-1.5 h-1.5 rounded-full bg-accent flex-shrink-0" />
-        <span className="text-cream-muted text-xs font-mono">
-          {copied ? 'Copied!' : code.toUpperCase()}
+        {status === 'idle' && <div className="w-1.5 h-1.5 rounded-full bg-accent flex-shrink-0" />}
+        <span className={`text-sm font-mono transition-colors ${status !== 'idle' ? 'text-accent' : 'text-cream'}`}>
+          {label}
         </span>
-        {!copied && <CopyIcon />}
+        {status === 'idle'
+          ? <ShareIcon />
+          : <CheckIcon />
+        }
       </button>
     </header>
   )

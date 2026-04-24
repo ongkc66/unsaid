@@ -12,6 +12,13 @@ interface Props {
   onSubmitted?: () => void
 }
 
+const QUESTION_STARTERS = [
+  'What frustrated you this week?',
+  "What's something we keep avoiding?",
+  'What do you wish we did differently?',
+  "What's something left unsaid lately?",
+]
+
 export default function AnswerDrawer({
   isOpen, onClose, mode, questionText, teamCode, questionId, onSubmitted,
 }: Props) {
@@ -69,20 +76,35 @@ export default function AnswerDrawer({
         }`}
       >
         <div
-          className="bg-surface-raised rounded-t-2xl max-w-lg mx-auto px-4 pt-4"
+          className="bg-surface-raised rounded-t-2xl max-w-2xl mx-auto px-4 pt-4"
           style={{ paddingBottom: 'max(2rem, env(safe-area-inset-bottom))' }}
         >
           <div className="w-10 h-1 bg-white/20 rounded-full mx-auto mb-5" />
 
           {mode === 'answer' && questionText && (
-            <p className="text-cream-muted text-sm mb-4 leading-relaxed border-l-2 border-accent/40 pl-3">
+            <p className="text-cream-muted text-base mb-4 leading-relaxed border-l-2 border-accent/40 pl-3">
               {questionText}
             </p>
           )}
 
-          <h2 className="text-cream font-medium mb-3 text-sm">
+          <h2 className="text-cream font-medium mb-3 text-base">
             {mode === 'question' ? 'Ask the team something' : 'Your answer'}
           </h2>
+
+          {mode === 'question' && text.length === 0 && (
+            <div className="flex flex-wrap gap-2 mb-3">
+              {QUESTION_STARTERS.map((starter) => (
+                <button
+                  key={starter}
+                  type="button"
+                  onClick={() => setText(starter)}
+                  className="whitespace-nowrap text-sm text-cream-muted bg-surface border border-white/10 rounded-full px-3.5 py-2 hover:border-accent/40 hover:text-cream transition-colors active:scale-95"
+                >
+                  {starter}
+                </button>
+              ))}
+            </div>
+          )}
 
           <textarea
             value={text}
@@ -93,19 +115,19 @@ export default function AnswerDrawer({
                 : 'Share your honest thoughts — your words will be anonymised before anyone sees them.'
             }
             rows={4}
-            className="w-full bg-surface border border-white/10 rounded-xl px-4 py-3 text-cream placeholder:text-cream-muted/40 text-sm resize-none focus:outline-none focus:border-accent transition-colors"
+            className="w-full bg-surface border border-white/10 rounded-xl px-4 py-3 text-cream placeholder:text-cream-muted/80 text-base resize-none focus:outline-none focus:border-accent transition-colors"
           />
 
-          <p className="text-cream-muted/50 text-xs mt-2 mb-4">
+          <p className="text-cream-muted text-sm mt-2 mb-4">
             Your writing style and tone will be rewritten before storing.
           </p>
 
-          {error && <p className="text-red-400 text-xs mb-3">{error}</p>}
+          {error && <p className="text-red-400 text-sm mb-3">{error}</p>}
 
           <button
             onClick={handleSubmit}
             disabled={text.trim().length === 0 || loading}
-            className="w-full bg-accent hover:bg-accent-hover disabled:opacity-40 disabled:cursor-not-allowed text-white font-medium py-3.5 rounded-xl transition-colors text-sm"
+            className="w-full bg-accent hover:bg-accent-hover disabled:opacity-40 disabled:cursor-not-allowed text-white font-medium py-3.5 rounded-xl transition-colors text-base"
           >
             {loading ? 'Anonymising…' : mode === 'question' ? 'Submit question' : 'Submit answer'}
           </button>

@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabaseAdmin } from '@/lib/supabase'
-import { synthesize } from '@/lib/claude'
+import { supabaseAdmin } from '@/lib/supabase-admin'
+import { synthesize, generateInsightExtras } from '@/lib/claude'
+import { insertSeedQuestion } from '@/lib/seed'
+import { refreshTeamSummary } from '@/lib/team-summary'
 
 export async function GET(req: NextRequest) {
   const question_id = req.nextUrl.searchParams.get('question_id')
@@ -8,7 +10,7 @@ export async function GET(req: NextRequest) {
 
   const { data, error } = await supabaseAdmin
     .from('synthesis')
-    .select('id, question_id, insight_text, created_at')
+    .select('id, question_id, insight_text, themes, suggestions, created_at')
     .eq('question_id', question_id)
     .single()
 
@@ -33,16 +35,38 @@ export async function POST(req: NextRequest) {
   const answerTexts = answers.map((a) => a.anonymized_text)
   const insight_text = await synthesize(answerTexts)
 
+  // Extras — themes + suggestions. Fail-safe: if Claude trips, persist empty
+  // arrays so the insight reveal still lands and the UI degrades gracefully.
+  let themes: string[] = []
+  let suggestions: string[] = []
+  try {
+    const extras = await generateInsightExtras(insight_text, answerTexts)
+    themes = extras.themes
+    suggestions = extras.suggestions
+  } catch {
+    // swallow — insight > extras
+  }
+
   // Save insight
   await supabaseAdmin
     .from('synthesis')
-    .insert({ question_id, insight_text })
+    .insert({ question_id, insight_text, themes, suggestions })
 
   // Close the question
-  await supabaseAdmin
+  const { data: closed } = await supabaseAdmin
     .from('questions')
     .update({ status: 'closed' })
     .eq('id', question_id)
+    .select('team_id')
+    .single()
+
+  if (closed?.team_id) {
+    // Refresh the cached team summary with this new insight folded in.
+    await refreshTeamSummary(closed.team_id)
+    // Momentum: as one thread closes, drop in a contextual follow-up question
+    // that deepens the insight the team just revealed.
+    await insertSeedQuestion(closed.team_id, insight_text)
+  }
 
   return NextResponse.json({ ok: true, insight_text })
 }
