@@ -90,7 +90,7 @@ export default function QuestionDetail({
   const isClosed = question.status === 'closed'
 
   return (
-    <main className="min-h-screen flex flex-col max-w-lg mx-auto px-4">
+    <main className="min-h-screen flex flex-col max-w-lg mx-auto px-4 pb-16">
 
       {/* Back nav */}
       <div className="pt-12 pb-6">
