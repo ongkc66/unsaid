@@ -6,38 +6,91 @@ import { fileURLToPath } from 'url'
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const BASE = 'http://localhost:3000'
 const TEAM_CODE = 'DEMO01'
-// This question has 1/4 answers — we pre-seed it to 3/4, then the live answer triggers synthesis
-const TARGET_QID = '2abf2288-f383-4671-8830-d541db079718'
 
-async function postAnswer(text) {
-  const res = await fetch(`${BASE}/api/answers`, {
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+async function postQuestion(raw_text) {
+  const res = await fetch(`${BASE}/api/questions`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ raw_text: text, question_id: TARGET_QID }),
+    body: JSON.stringify({ raw_text, team_code: TEAM_CODE }),
   })
   return res.json()
 }
 
-async function preSeed() {
-  console.log('⏳ Pre-seeding 2 answers to bring question to 3/4…')
-  const a1 = await postAnswer('Remote work has made us better at documentation but worse at reading the room. Trust-building now requires much more intentional effort to create those informal moments.')
-  if (a1.error) { console.error('Pre-seed #1 failed:', a1.error); process.exit(1) }
-  console.log(`   answer 1 → count: ${a1.answer_count}`)
-
-  const a2 = await postAnswer('We rely heavily on written updates but a lot of nuance gets lost. Shared context feels thinner than it used to be in person.')
-  if (a2.error) { console.error('Pre-seed #2 failed:', a2.error); process.exit(1) }
-  console.log(`   answer 2 → count: ${a2.answer_count}`)
-
-  if (a2.answer_count !== 3) {
-    console.warn(`⚠️  Expected 3/4 — got ${a2.answer_count}. Check answer_count in DB.`)
-  } else {
-    console.log('✅ Pre-seed done — question is at 3/4')
-  }
+async function postAnswer(raw_text, question_id) {
+  const res = await fetch(`${BASE}/api/answers`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ raw_text, question_id }),
+  })
+  return res.json()
 }
 
-async function record() {
-  console.log('🎬 Starting recording…')
-  const browser = await chromium.launch({ headless: false, slowMo: 60 })
+// ── Setup — runs before the camera rolls ─────────────────────────────────────
+
+async function setup() {
+  console.log('\n📋 Setup phase — seeding questions + answers…\n')
+
+  // Submit 3 questions that will be assigned distinct labels by Claude
+  console.log('  → Submitting Leadership question…')
+  const q1 = await postQuestion(
+    "Why do leadership decisions feel so disconnected from the day-to-day reality of our work?"
+  )
+  console.log(`     label: ${q1.label} | id: ${q1.id?.slice(0, 8)}`)
+
+  console.log('  → Submitting Process question…')
+  const q2 = await postQuestion(
+    "What single change to how we run our weekly sync would make it actually worth everyone's time?"
+  )
+  console.log(`     label: ${q2.label} | id: ${q2.id?.slice(0, 8)}`)
+
+  console.log('  → Submitting Wellbeing question (this is the synthesis target)…')
+  const q3 = await postQuestion(
+    "What's been draining your energy at work lately that you haven't mentioned to anyone?"
+  )
+  console.log(`     label: ${q3.label} | id: ${q3.id?.slice(0, 8)}`)
+
+  if (!q3.id) {
+    console.error('❌ Failed to create synthesis target question:', q3)
+    process.exit(1)
+  }
+
+  // Pre-seed 3 answers to q3 → 3/4 answered; live answer triggers synthesis
+  console.log('\n  → Pre-seeding 3 answers to Wellbeing question…')
+  const a1 = await postAnswer(
+    "I've been staying late to cover for gaps in the team but haven't said anything because I don't want to seem like I'm complaining.",
+    q3.id
+  )
+  console.log(`     answer 1 → count: ${a1.answer_count}`)
+
+  const a2 = await postAnswer(
+    "The constant context switching between projects is exhausting. I finish the day feeling busy but not like I've actually moved anything forward.",
+    q3.id
+  )
+  console.log(`     answer 2 → count: ${a2.answer_count}`)
+
+  const a3 = await postAnswer(
+    "Unclear expectations. I never quite know if what I'm doing is the right priority, so there's always a background anxiety that I'm working on the wrong thing.",
+    q3.id
+  )
+  console.log(`     answer 3 → count: ${a3.answer_count}`)
+
+  if (a3.answer_count !== 3) {
+    console.warn(`⚠️  Expected 3/4 — got ${a3.answer_count}`)
+  } else {
+    console.log('\n✅ Setup complete — question at 3/4, ready for live synthesis trigger')
+  }
+
+  return q3.id
+}
+
+// ── Recording ─────────────────────────────────────────────────────────────────
+
+async function record(targetQId) {
+  console.log('\n🎬 Recording — 2-minute desktop demo…\n')
+
+  const browser = await chromium.launch({ headless: false, slowMo: 50 })
   const context = await browser.newContext({
     viewport: { width: 1440, height: 900 },
     deviceScaleFactor: 1,
@@ -45,94 +98,136 @@ async function record() {
   })
   const page = await context.newPage()
 
-  // ── 0–3s: Home — ambient orbs + rotating prompt ──────────────────────────
+  // ── 0–5s: Home — orbs drifting, 2 prompts cycle ──────────────────────────
   await page.goto(BASE)
   await page.waitForSelector('text=Teams are asking', { timeout: 6000 })
-  await page.waitForTimeout(3200)
+  await page.waitForTimeout(5500)
 
-  // ── 3–7s: Join DEMO01 ─────────────────────────────────────────────────────
+  // ── 5–12s: Join DEMO01 ────────────────────────────────────────────────────
   await page.click('text=Already have a code? Join instead')
   await page.waitForTimeout(500)
-  await page.locator('input[placeholder="XXXXXX"]').type(TEAM_CODE, { delay: 140 })
-  await page.waitForTimeout(700)
+  await page.locator('input[placeholder="XXXXXX"]').type(TEAM_CODE, { delay: 130 })
+  await page.waitForTimeout(600)
   await page.click('button:has-text("Join team")')
-
-  // ── 7–9s: Feed loads with historical questions ────────────────────────────
   await page.waitForURL(`**/${TEAM_CODE}`, { timeout: 10000 })
   await page.waitForSelector('text=answered', { timeout: 10000 })
-  await page.waitForTimeout(2200)
+  await page.waitForTimeout(2500)
 
-  // ── 9–14s: Ask a new question via FAB ────────────────────────────────────
+  // ── 12–22s: Filter bar interaction — filter → browse → clear ─────────────
+  // Wait for filter bar to appear (needs ≥2 distinct labels)
+  await page.waitForSelector('button:has-text("All")', { timeout: 8000 })
+  await page.waitForTimeout(800)
+
+  // Click Leadership filter
+  const leadershipBtn = page.locator('button', { hasText: 'Leadership' }).first()
+  await leadershipBtn.click()
+  await page.waitForTimeout(2500)
+
+  // Click Wellbeing filter
+  const wellbeingBtn = page.locator('button', { hasText: 'Wellbeing' }).first()
+  await wellbeingBtn.click()
+  await page.waitForTimeout(2000)
+
+  // Clear back to All
+  await page.click('button:has-text("All")')
+  await page.waitForTimeout(1500)
+
+  // ── 22–32s: Submit a new question via FAB ─────────────────────────────────
   await page.click('button[aria-label="Ask the team a question"]')
-  await page.waitForTimeout(600)
+  await page.waitForTimeout(700)
   await page.locator('textarea:visible').type(
-    "What's one ritual that would make this team feel more connected every week?",
-    { delay: 52 }
+    "What would it take for this team to feel genuinely proud of how we work together?",
+    { delay: 48 }
   )
   await page.waitForTimeout(900)
   await page.click('button:has-text("Submit question")')
+  // Wait for Claude anonymization + card appearing with label pill
+  await page.waitForTimeout(4000)
+  await page.waitForSelector('text=0 of 4 answered', { timeout: 12000 }).catch(() => {})
+  await page.waitForTimeout(1800)
 
-  // Wait for anonymization + new card appearing with label pill
-  await page.waitForTimeout(3800)
-  await page.waitForSelector('text=0 of 4 answered', { timeout: 12000 })
-  await page.waitForTimeout(1600)
-
-  // ── 14–17s: Open the 3/4 question ────────────────────────────────────────
-  await page.locator(`a[href*="${TARGET_QID}"]`).click()
+  // ── 32–40s: Open the 3/4 Wellbeing question ───────────────────────────────
+  await page.locator(`a[href*="${targetQId}"]`).click()
   await page.waitForSelector('text=3 of 4 answered', { timeout: 8000 })
-  await page.waitForTimeout(1200)
+  await page.waitForTimeout(1500)
 
-  // ── 17–22s: Submit the final answer → triggers synthesis ──────────────────
+  // ── 40–50s: Submit final answer → triggers synthesis ──────────────────────
   await page.click('button:has-text("Answer this question")')
-  await page.waitForTimeout(600)
+  await page.waitForTimeout(700)
   await page.locator('textarea:visible').type(
-    "We've gotten good at async but something gets lost. The best moments are still when we actually talk things through together in real time.",
+    "Honestly, just not feeling like I have to guess what actually matters. When the work is clear, the energy comes back.",
     { delay: 48 }
   )
   await page.waitForTimeout(900)
   await page.click('button:has-text("Submit answer")')
 
-  // ── 22–29s: Synthesis fires — wait for word-by-word reveal ────────────────
-  // First the "Generating insight…" pulse appears, then reveal-word spans
+  // ── 50–65s: Synthesis fires — word-by-word reveal ─────────────────────────
   await page.waitForSelector('text=Generating insight', { timeout: 12000 }).catch(() => {})
   await page.waitForSelector('.reveal-word', { timeout: 25000 })
-  await page.waitForTimeout(7500) // let the animation play to completion
+  await page.waitForTimeout(9000) // let animation breathe fully
 
-  // ── 29–32s: Back to feed — see glowing Insight ready card ────────────────
-  await page.click('text=Back to feed')
-  await page.waitForSelector('text=Insight ready', { timeout: 8000 })
-  await page.waitForTimeout(2200)
-
-  // ── 32–42s: Pulse tab — heatmap, ring, themes, suggestions ───────────────
-  await page.click('button[aria-label="Pulse"]')
-  await page.waitForTimeout(1800)
-  // Scroll through the page in 4 beats
-  await page.mouse.wheel(0, 260)
-  await page.waitForTimeout(1200)
-  await page.mouse.wheel(0, 280)
-  await page.waitForTimeout(1200)
-  await page.mouse.wheel(0, 300)
-  await page.waitForTimeout(1300)
-  await page.mouse.wheel(0, 300)
+  // Scroll down to see themes + suggestions
+  await page.mouse.wheel(0, 200)
+  await page.waitForTimeout(2500)
+  await page.mouse.wheel(0, 200)
   await page.waitForTimeout(2000)
 
-  // ── Wrap up ───────────────────────────────────────────────────────────────
+  // ── 65–75s: Back to feed → glowing Insight ready card ────────────────────
+  await page.click('text=Back to feed')
+  await page.waitForSelector('text=Insight ready', { timeout: 8000 })
+  await page.waitForTimeout(2500)
+
+  // ── 75–95s: Insights tab — team portrait + insight history ───────────────
+  await page.click('button[aria-label="Insights"]')
+  await page.waitForTimeout(2000)
+  // Scroll through insights
+  await page.mouse.wheel(0, 300)
+  await page.waitForTimeout(2000)
+  await page.mouse.wheel(0, 300)
+  await page.waitForTimeout(2000)
+  await page.mouse.wheel(0, 300)
+  await page.waitForTimeout(1500)
+
+  // ── 95–120s: Pulse tab — heatmap → ring → themes → suggestions ───────────
+  await page.click('button[aria-label="Pulse"]')
+  await page.waitForTimeout(2000)
+
+  // Pause on heatmap
+  await page.waitForTimeout(3000)
+
+  // Scroll to completion ring
+  await page.mouse.wheel(0, 320)
+  await page.waitForTimeout(2500)
+
+  // Scroll to theme frequency
+  await page.mouse.wheel(0, 320)
+  await page.waitForTimeout(2500)
+
+  // Scroll to suggestion tracker
+  await page.mouse.wheel(0, 350)
+  await page.waitForTimeout(3000)
+
+  // ── 120s: End ─────────────────────────────────────────────────────────────
   await context.close()
   await browser.close()
 
-  // Rename the generated .webm to a stable filename
+  // Rename to stable filename
   const files = fs.readdirSync(__dirname).filter((f) => f.endsWith('.webm'))
   if (files.length) {
     const latest = files.sort().at(-1)
     const dest = path.join(__dirname, 'unsaid-demo.webm')
     fs.renameSync(path.join(__dirname, latest), dest)
-    console.log(`\n✅ Recording saved → demo/unsaid-demo.webm`)
+    console.log('\n✅ Recording saved → demo/unsaid-demo.webm')
   } else {
-    console.warn('⚠️  No .webm found — check that recordVideo is supported.')
+    console.warn('⚠️  No .webm found')
   }
 }
 
-preSeed().then(record).catch((err) => {
-  console.error('❌ Error:', err)
-  process.exit(1)
-})
+// ── Entry point ───────────────────────────────────────────────────────────────
+
+setup()
+  .then(record)
+  .catch((err) => {
+    console.error('❌', err)
+    process.exit(1)
+  })

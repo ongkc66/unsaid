@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  * { margin: 0; padding: 0; }
+  body { width: 600px; height: 600px; background: transparent; }
+</style>
+</head>
+<body>
+<svg width="600" height="600" viewBox="0 0 600 600" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- Rounded square clip for app-icon shape -->
+    <clipPath id="appIcon">
+      <rect width="600" height="600" rx="132" ry="132"/>
+    </clipPath>
+    <!-- Glow filter for dots -->
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="6" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <!-- Subtle inner shadow on bubble -->
+    <filter id="softShadow" x="-10%" y="-10%" width="120%" height="130%">
+      <feDropShadow dx="0" dy="8" stdDeviation="20" flood-color="#000000" flood-opacity="0.35"/>
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="600" height="600" fill="#0D0F1A" rx="132" ry="132"/>
+
+  <!-- Subtle radial bloom behind bubble -->
+  <radialGradient id="bloom" cx="50%" cy="46%" r="38%">
+    <stop offset="0%" stop-color="#6366F1" stop-opacity="0.18"/>
+    <stop offset="100%" stop-color="#6366F1" stop-opacity="0"/>
+  </radialGradient>
+  <rect width="600" height="600" fill="url(#bloom)" rx="132" ry="132"/>
+
+  <!-- Speech bubble body -->
+  <!-- Bubble: 320w × 210h, centered at (300, 268) -->
+  <!-- Tail: bottom-left pointing down -->
+  <g filter="url(#softShadow)">
+    <path d="
+      M 160 168
+      Q 160 148 180 148
+      L 420 148
+      Q 440 148 440 168
+      L 440 318
+      Q 440 338 420 338
+      L 232 338
+      L 196 388
+      L 210 338
+      L 180 338
+      Q 160 338 160 318
+      Z
+    " fill="#F0EEE6" opacity="0.97"/>
+  </g>
+
+  <!-- Three fading dots inside bubble — centered vertically in bubble (~243px) -->
+  <!-- Dot 1 — solid indigo -->
+  <circle cx="246" cy="243" r="22" fill="#6366F1" filter="url(#glow)"/>
+
+  <!-- Dot 2 — mid opacity -->
+  <circle cx="300" cy="243" r="22" fill="#6366F1" opacity="0.45" filter="url(#glow)"/>
+
+  <!-- Dot 3 — ghost -->
+  <circle cx="354" cy="243" r="22" fill="#6366F1" opacity="0.15"/>
+
+  <!-- Wordmark -->
+  <text
+    x="300"
+    y="472"
+    font-family="-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', sans-serif"
+    font-size="42"
+    font-weight="600"
+    letter-spacing="14"
+    fill="#F0EEE6"
+    opacity="0.92"
+    text-anchor="middle"
+    dominant-baseline="middle"
+  >UNSAID</text>
+
+  <!-- Hairline rule between bubble and wordmark -->
+  <line x1="220" y1="430" x2="380" y2="430" stroke="#F0EEE6" stroke-width="0.75" opacity="0.18"/>
+</svg>
+</body>
+</html>
