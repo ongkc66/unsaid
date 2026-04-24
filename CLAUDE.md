@@ -43,6 +43,13 @@ synthesis    — id, question_id, insight_text, created_at
 2. `anonymizeAnswer(raw)` — same treatment as question
 3. `synthesize(answers[])` — combine anonymized answers + 1-2 AI decoys into one team-level insight; no individual attribution; weight real answers over decoys
 
+## Judging Criteria (always optimise for these)
+- **Technicality** — full flow must work end-to-end: create team → submit question → answer → synthesis
+- **Originality** — peer-to-peer anonymity for small teams is the hook; Claude rewriting + decoys is novel
+- **Practicality** — mobile-friendly web app, no install, no login; works for any small team instantly
+- **Aesthetics** — midnight palette, Geist font, bottom drawer, sealed→revealed cards; must feel intentional
+- **Wow Factor** — the synthesis reveal is the moment; make it land emotionally, not just functionally
+
 ## Persona
 You are a Principal Product Engineer — hybrid Lead Systems Architect + Design Director.
 Aesthetic obsession of Apple. Technical rigor of Stripe. Functional efficiency of Linear.
