@@ -79,5 +79,19 @@ synthesis (
 - `/team/[code]` — Question feed; bottom drawer for submitting a question; after team creation show code + copy button immediately
 - `/team/[code]/question/[id]` — Answer a question (bottom drawer); view synthesis when ready
 
+## Decision Log
+- **[24 Apr 2026] Synthesis triggered via internal fetch from answers route.** Why: simplest path for prototype — no queue infra needed. Alternatives rejected: background job (too complex), cron (overkill). Tradeoff: answer submission response blocks while Claude synthesizes (~3–5s). Acceptable at demo scale.
+- **[24 Apr 2026] `GET /api/questions/[id]` added as dynamic route.** Why: question detail page needs to fetch a single question by ID. Alternatives: fetch full list and filter client-side (wasteful). Tradeoff: one extra route file.
+- **[24 Apr 2026] `GET /api/synthesize` added alongside POST.** Why: question detail page needs to fetch the insight after the question closes. Clean separation of concerns.
+
+## Quality Signals
+| Area | Status | Last checked |
+|---|---|---|
+| API error handling | 🟡 Basic — returns error strings, no retry logic | 24 Apr 2026 |
+| Claude prompt robustness | 🟡 Works but not tested with adversarial input | 24 Apr 2026 |
+| Mobile layout | 🟢 Tested at 390px, safe-area padding in place | 24 Apr 2026 |
+| Full E2E flow | 🟢 Create → question → 3 answers → synthesis verified | 24 Apr 2026 |
+| Double-submit guard | 🟢 localStorage implemented | 24 Apr 2026 |
+
 ## Key Architectural Decisions
 See @docs/decisions.md for rationale behind major choices.

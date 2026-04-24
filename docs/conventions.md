@@ -23,6 +23,16 @@
 - Prompts use system + user message pattern
 - Keep prompts short and directive — no chain-of-thought for anonymization
 
+## Key Gotchas
+- **Next.js 16 params are Promises** — even in `'use client'` components, dynamic route params must be unwrapped with `React.use(params)`. Direct access (`params.code`) crashes the page silently in dev and throws in prod.
+- **Playwright captures before useEffect** — `npx playwright screenshot` takes the shot before client-side data fetches complete. Always use `page.waitForFunction(() => !document.body.innerText.includes('Loading…'))` to wait for real content.
+- **Supabase CLI IPv6 issue** — `supabase db query --db-url` fails on machines without IPv4 direct routing to Supabase. Apply schema via the Supabase SQL editor dashboard instead.
+- **create-next-app rejects non-empty dirs** — scaffold to a temp folder (`/tmp/project-tmp`) then `cp -r` into the target directory.
+- **Synthesis via internal fetch** — answers route triggers synthesis via `fetch('/api/synthesize')`. Acceptable for prototype; in production this must be a background queue to avoid blocking the answer response.
+
+## Deprecated Patterns
+_(none yet)_
+
 ## Component Patterns
 - Server components by default; only add `'use client'` when interactivity is needed
 - Forms use native HTML form + server actions where possible
